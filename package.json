@@ -1,0 +1,43 @@
+{
+  "name": "multipart-proxy",
+  "description": "A proxy that accelerates requests via multipart downloading",
+  "author": "Alexandre Kirszenberg <a.kirszenberg@gmail.com>",
+  "version": "0.0.1",
+  "license": "MIT",
+  "keywords": [
+    "multipart",
+    "proxy",
+    "http"
+  ],
+
+  "repository": {
+    "type": "git",
+    "url": "git@github.com:morhaus/multipart-proxy.git"
+  },
+
+  "scripts": {
+    "prepublish": "grunt"
+  },
+
+  "engines": {
+    "node": ">=0.10.0"
+  },
+
+  "engineStrict": true,
+
+  "dependencies": {
+    "commander": "2.0.0",
+    "lodash": "*",
+    "async": "*",
+    "multisource-stream": "0.0.*",
+    "tmpl-log": "0.0.*"
+  },
+
+  "devDependencies": {
+    "grunt": "*",
+    "grunt-cli": "*",
+    "grunt-contrib-watch": "*",
+    "grunt-contrib-coffee": "*",
+    "grunt-contrib-clean": "*"
+  }
+}
