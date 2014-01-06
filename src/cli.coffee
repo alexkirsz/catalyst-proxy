@@ -8,7 +8,7 @@ Proxy = require './proxy'
 logr = new Logger
 
 program
-  .version('0.1.0')
+  .version('0.1.1')
 
 program
   .command('start')
