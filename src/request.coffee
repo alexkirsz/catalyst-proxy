@@ -98,9 +98,10 @@ module.exports = class Request extends Duplex
           called = true
 
         if streaming
-          console.log 'STREAM', @length, @range
+          console.log 'STREAM', (url.format @reqOpts), @length, @range
           @_streamingMode()
         else
+          console.log 'THROUGH', (url.format @reqOpts), @length, @range
           thread.on 'end', => @stream.end()
           thread.on 'disconnect', => @stream.end()
 

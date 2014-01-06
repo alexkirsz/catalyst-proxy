@@ -15,6 +15,7 @@ Use-cases
 Installation
 ------------
 You need to have Node.JS >= 0.10.0 installed on your system.
+
 ```$ npm install -g catalyst-proxy```
 
 To update:

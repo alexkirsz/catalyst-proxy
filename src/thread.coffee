@@ -109,7 +109,7 @@ module.exports = class Thread extends Duplex
 
     @_req.removeAllListeners()
     @_req.on 'error', (e) -> console.log 'req error', e # Dummy error listener
-    @_req.connection.destroy()
+    @_req.abort()
 
     if @_res
       @_res.removeAllListeners()
