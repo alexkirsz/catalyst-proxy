@@ -32,7 +32,7 @@ Usage
 
 Configuration
 -------------
-`--partSize`, `--threads` and `--contentLength`' are the three CLI options you should be tweaking.
+`--partSize`, `--threads` and `--contentLength` are the three CLI options you should be tweaking.
 
   * `partSize` specifies the size of each thread part. For example, if set to `1048576`, it will cut the resource into parts of `1 megabyte = 1048576 bytes` each. For video streaming, you should try to set this as low as is reasonable.
   * `threads` specifies the maximum amount of concurrent threads. For example, if set to `12`, it will launch as many as `12` concurrent threads, each downloading a resource part of size `partSize`. Note that download speed will be balanced between threads.
