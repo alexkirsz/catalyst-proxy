@@ -1,3 +1,6 @@
+http = require 'http'
 Proxy = require './proxy'
 
-new Proxy 3000
+http.globalAgent.maxSockets = Infinity
+
+new Proxy 8080
