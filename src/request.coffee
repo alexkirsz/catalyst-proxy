@@ -3,7 +3,7 @@ url = require 'url'
 { Duplex } = require 'stream'
 
 _ = require 'lodash'
-Multisource = require '../../multisource-stream'
+Multisource = require 'multisource-stream'
 
 Thread = require './thread'
 
