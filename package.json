@@ -2,7 +2,7 @@
   "name": "multipart-proxy",
   "description": "A proxy that accelerates requests via multipart downloading",
   "author": "Alexandre Kirszenberg <a.kirszenberg@gmail.com>",
-  "version": "0.0.1",
+  "version": "0.1.0",
   "license": "MIT",
   "keywords": [
     "multipart",
