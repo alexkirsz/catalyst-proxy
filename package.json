@@ -2,7 +2,7 @@
   "name": "catalyst-proxy",
   "description": "A proxy that accelerates requests via multipart downloading",
   "author": "Alexandre Kirszenberg <a.kirszenberg@gmail.com>",
-  "version": "0.1.1",
+  "version": "0.1.2",
   "license": "MIT",
   "keywords": [
     "multipart",
@@ -32,7 +32,7 @@
   "dependencies": {
     "commander": "2.*",
     "lodash": "*",
-    "multisource-stream": "0.0.*",
+    "multisource-stream": "0.0.3",
     "tmpl-log": "0.0.*"
   },
 
