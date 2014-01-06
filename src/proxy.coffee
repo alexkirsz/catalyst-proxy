@@ -1,34 +1,34 @@
 http = require 'http'
 url = require 'url'
+{ EventEmitter } = require 'events'
 
 _ = require 'lodash'
 
 Request = require './request'
 
-module.exports = class Proxy
-  constructor: (listenPort, listenHost, opts = {}) ->
-    if typeof listenHost is 'object'
-      opts = listenHost
-      listenHost = undefined
+module.exports = class Proxy extends EventEmitter
+  constructor: (opts = {}) ->
+    super()
 
     @opts = _.clone opts
     _.defaults @opts,
-      maxConcurrent: 12
+      threads: 12
       partSize: 1024 * 1024 / 4
-      minContentLength: 1024 * 1024
+      contentLength: 1024 * 1024
 
-    http.createServer()
-      .on('request', @request)
-      .listen(listenPort, listenHost)
+    @server = http.createServer()
+    @server.on 'request', @request
+    @server.on 'error', (e) =>
+      @emit 'error', e
 
   _isDownloadable: (res) ->
-    res.statusCode in [200, 206] and (parseInt res.headers['content-length']) >= @opts.minContentLength
+    res.statusCode in [200, 206] and (parseInt res.headers['content-length']) >= @opts.contentLength
 
   request: (clientReq, clientRes) =>
     reqOpts = url.parse clientReq.url
     reqOpts.method = clientReq.method
     reqOpts.headers = clientReq.headers
-    reqOpts.agent = new http.Agent maxSockets: @opts.maxConcurrent
+    reqOpts.agent = new http.Agent maxSockets: @opts.threads
 
     # Create new request
     request = new Request reqOpts, @opts
@@ -48,3 +48,6 @@ module.exports = class Proxy
     # Stop the request whether or not it has completed
     clientRes.on 'close', ->
       request.stop()
+
+  listen: (port, host, callback) ->
+    @server.listen port, host, callback

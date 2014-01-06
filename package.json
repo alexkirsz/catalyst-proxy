@@ -1,5 +1,5 @@
 {
-  "name": "multipart-proxy",
+  "name": "catalyst-proxy",
   "description": "A proxy that accelerates requests via multipart downloading",
   "author": "Alexandre Kirszenberg <a.kirszenberg@gmail.com>",
   "version": "0.1.0",
@@ -12,7 +12,11 @@
 
   "repository": {
     "type": "git",
-    "url": "git@github.com:morhaus/multipart-proxy.git"
+    "url": "git@github.com:morhaus/catalyst-proxy.git"
+  },
+
+  "bin": {
+    "catalyst": "./bin/catalyst.js"
   },
 
   "scripts": {
@@ -26,9 +30,8 @@
   "engineStrict": true,
 
   "dependencies": {
-    "commander": "2.0.0",
+    "commander": "2.*",
     "lodash": "*",
-    "async": "*",
     "multisource-stream": "0.0.*",
     "tmpl-log": "0.0.*"
   },

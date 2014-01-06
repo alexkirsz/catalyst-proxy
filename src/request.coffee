@@ -224,8 +224,8 @@ module.exports = class Request extends Duplex
 
   # Fills the running thread pool
   _fill: ->
-    console.log "FILL #{@runningPool.length}/#{@opts.maxConcurrent}, #{@offset}/#{@range[1]}, #{@pool.indexOf @runningPool[0]}"
-    if @runningPool.length < @opts.maxConcurrent and @offset isnt @range[1]
+    console.log "FILL #{@runningPool.length}/#{@opts.threads}, #{@offset}/#{@range[1]}, #{@pool.indexOf @runningPool[0]}"
+    if @runningPool.length < @opts.threads and @offset isnt @range[1]
       # Calculate correct thread length
       length = @range[1] - @offset
       length = @opts.partSize if length > @opts.partSize
