@@ -1,4 +1,5 @@
 http = require 'http'
+url = require 'url'
 { Duplex } = require 'stream'
 
 _ = require 'lodash'
@@ -39,17 +40,19 @@ module.exports = class Thread extends Duplex
     @connecting = true
 
     # Set range header
-    if @range[0] isnt 0
+    if @reqOpts.method is 'GET'
       end = if @opts.endOffset then (@opts.endOffset - 1) else null
       @reqOpts.headers['range'] = createRange @offset, end
-    else if @reqOpts.headers['range']
-      delete @reqOpts.headers['range']
 
     # Create request
     @_req = http.request @reqOpts
 
     # Listen to response
     @_req.on 'response', (@_res) =>
+      if @_res.statusCode is 302
+        @emit 'redirect', @_res
+        return
+
       @connected = true
       @connecting = false
 
@@ -68,7 +71,7 @@ module.exports = class Thread extends Duplex
         @_readRes() if @_reading
 
       @_res.on 'end', =>
-        if @offset is @range[1]
+        if @offset >= @range[1]
           @push null
         else
           @connected = false
@@ -77,8 +80,7 @@ module.exports = class Thread extends Duplex
 
       @emit 'connect', @_res 
 
-    @_req.on 'error', (e) =>
-      @emit 'error', e
+    @_req.on 'error', (e) => @emit 'error', e
 
   _readRes: ->
     data = @_res.read()
@@ -108,12 +110,12 @@ module.exports = class Thread extends Duplex
     @connected = false
 
     @_req.removeAllListeners()
-    @_req.on 'error', (e) -> console.log 'req error', e # Dummy error listener
+    @_req.on 'error', (e) -> # Dummy error listener
     @_req.abort()
 
     if @_res
       @_res.removeAllListeners()
-      @_res.on 'error', (e) -> console.log 'res error', e # Dummy error listener
+      @_res.on 'error', (e) -> # Dummy error listener
       @_res.connection.destroy()
 
   # Ends the request

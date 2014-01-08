@@ -2,7 +2,7 @@
   "name": "catalyst-proxy",
   "description": "A proxy that accelerates requests via multipart downloading",
   "author": "Alexandre Kirszenberg <a.kirszenberg@gmail.com>",
-  "version": "0.1.2",
+  "version": "0.2.0",
   "license": "MIT",
   "keywords": [
     "multipart",

@@ -4,11 +4,11 @@ program = require 'commander'
 Logger = require 'tmpl-log'
 
 Proxy = require './proxy'
+pckg = require '../package.json'
 
 logr = new Logger
 
-program
-  .version('0.1.2')
+program.version pckg.version
 
 program
   .command('start')
@@ -17,8 +17,9 @@ program
   .option('-t, --threads <t>', 'max concurrent threads', Number, 12)
   .option('-s, --partSize <p>', 'thread part size', Number, 1024 * 1024 * 2)
   .option('-l, --contentLength <l>', 'min content length for threaded downloading', Number, 1024 * 1024 * 4)
-  .action (args..., { port, host, threads, partSize, contentLength }) ->
-    proxy = new Proxy { threads, partSize, contentLength }
+  .option('-P, --proxy <p>', 'proxy to forward requests to', String)
+  .action (args..., { port, host, threads, partSize, contentLength, proxy }) ->
+    proxy = new Proxy { threads, partSize, contentLength, proxy }
     proxy.on 'error', (e) ->
       if e.syscall is 'listen'
         switch e.code

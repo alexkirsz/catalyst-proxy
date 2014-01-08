@@ -25,7 +25,6 @@ module.exports = class Request extends Duplex
 
     # Parse and setup initial range
     range = parseRange @reqOpts.headers['range']
-    console.log 'parsed', range, 'from', @reqOpts.headers['range']
     if range is false
       throw new Error "unsupported range header: #{@reqOpts.headers['range']}"
     else if range
@@ -33,17 +32,15 @@ module.exports = class Request extends Duplex
     else
       @range = [0, null]
 
+    @readOffset = 0
     @offset = @range[0]
-
-    @connecting = false
-    @connected = false
 
     @pool = []
     @offsets = []
     @runningPool = []
 
     # Create a multisource stream and set its start offset at the range's start
-    @stream = new Multisource
+    @stream = new Multisource highWaterMark: @opts.partSize
     @stream.offset = @offset
 
     # Push data when available
@@ -51,13 +48,7 @@ module.exports = class Request extends Duplex
       @_readable = true
       @_readStream() if @_reading
 
-    # When the stream ends, end the request as well
-    @stream.on 'end', =>
-      @push null
-
   _createThread: (offset, length) ->
-    console.log "CREATE #{@pool.length} from #{offset} til #{offset + length}"
-
     thread = new Thread offset, length, @reqOpts, endOffset: @range[1]
 
     # Insert the thread at the correct place in the pool
@@ -66,13 +57,11 @@ module.exports = class Request extends Duplex
     @pool.splice idx, 0, thread
 
     # Pipe the thread to the stream from its offset
-    thread.pipe (@stream.from offset)
+    thread.pipe (@stream.from offset, highWaterMark: @opts.partSize)
 
     return thread
 
   start: ->
-    @connecting = true
-
     # Calculate correct thread length
     length = if @range[1] then (@range[1] - @offset) else Infinity
     length = @opts.partSize if length > @opts.partSize
@@ -81,9 +70,6 @@ module.exports = class Request extends Duplex
     thread = @_createThread @offset, length
 
     thread.once 'connect', (res) =>
-      @connecting = false
-      @connected = true
-
       # Retrieve the length from the thread
       @length = thread.length
       # Set correct end range
@@ -98,16 +84,13 @@ module.exports = class Request extends Duplex
           called = true
 
         if streaming
-          console.log 'STREAM', (url.format @reqOpts), @length, @range
           @_streamingMode()
         else
-          console.log 'THROUGH', (url.format @reqOpts), @length, @range
-          thread.on 'end', => @stream.end()
-          thread.on 'disconnect', => @stream.end()
+          thread.on 'end', => @push null
+          thread.on 'disconnect', => @push null
 
-    thread.on 'error', (e) =>
-      console.log 'ERROR, cancelling thread'
-      @stream.end()
+    thread.on 'error', ->
+      @push null
 
     # Start the thread
     thread.start()
@@ -122,27 +105,29 @@ module.exports = class Request extends Duplex
 
   # Stops the request
   stop: ->
-    @connecting = false
-    @connected = false
-
     thread.stop() for thread in @runningPool
 
     @pool = []
     @offsets = []
     @runningPool = []
 
-    @offset = @stream.offset
-    @range[0] = @stream.offset
+    @offset = @readOffset
+    @range[0] = @readOffset
+    @readOffset = 0
 
   _readStream: ->
     data = @stream.read()
-    @_reading = @push data if data
+    if data
+      @readOffset += data.length
+      @_reading = @push data
+      @push null if @readOffset is @range[1]
 
   _read: ->
     @_reading = true
     @_readStream() if @_readable
 
   _write: (chunk, encoding, callback) ->
+    # Write data to the first thread (this means the request has a body, not GET)
     @pool[0].write chunk, encoding, callback
 
   # Switches to threaded streaming downloading
@@ -164,55 +149,42 @@ module.exports = class Request extends Duplex
   # Binds event listeners to a thread
   _bindThread: (thread) ->
     thread.on 'cross', =>
-      console.log 'CROSS', (@pool.indexOf thread)
       next = @_getNextThread thread
 
-      if not next
-        console.log @stream.offset, @range[1], @runningPool.length
-        if @stream.offset is @range[1]
-          @_onEnd()
-        else
-          thread.range[1] += @opts.partSize
-          thread.crossed = false
-      else if not next.connected
-        # Replacing the next thread
+      if not next and thread.range[1] isnt @range[1]
+        # The most recent running thread has ended, extend it
+        thread.range[1] += @opts.partSize
+        thread.crossed = false
+        @offset += @opts.partSize
+      else if next and not next.connected and not next.crossed
+        # The next thread isn't running and hasn't completed, replace it
         thread.range[1] = next.range[1]
         thread.crossed = false
         @_removeThread next, true
         @_fill()
       else
+        # The next thread is running or has completed, remove this thread
         @_removeThread thread
         @_fill()
 
     thread.on 'disconnect', =>
-      # Clean up
-      thread.stop()
-      # Restart the thread
-      thread.start()
-      # End the thread's request
-      thread.end()
-
-      console.log 'trying to reconnect'
-      thread.once 'connect', =>
-        console.log 'successfully reconnected'
+      @_restartThread()
 
     thread.on 'error', =>
-      # Clean up
-      thread.stop()
-      # Restart the thread
-      thread.start()
-      # End the thread's request
-      thread.end()
+      @_restartThread()
 
-      console.log 'trying to reconnect'
-      thread.once 'connect', =>
-        console.log 'successfully reconnected'
+  _restartThread: (thread) ->
+    # Clean up
+    thread.stop()
+    # Restart the thread
+    thread.start()
+    # End the thread's request
+    thread.end()
 
   # Stops and removes a thread from the running pool
   _removeThread: (thread, hard = false) ->
     threadIdx = @pool.indexOf thread
     runningIdx = @runningPool.indexOf thread
-    console.log "REMOVE #{threadIdx}"
 
     if runningIdx isnt -1
       thread.stop()
@@ -225,7 +197,6 @@ module.exports = class Request extends Duplex
 
   # Fills the running thread pool
   _fill: ->
-    console.log "FILL #{@runningPool.length}/#{@opts.threads}, #{@offset}/#{@range[1]}, #{@pool.indexOf @runningPool[0]}"
     if @runningPool.length < @opts.threads and @offset isnt @range[1]
       # Calculate correct thread length
       length = @range[1] - @offset
@@ -235,6 +206,12 @@ module.exports = class Request extends Duplex
 
       # Continue filling on thread connect
       thread.once 'connect', => @_fill()
+      # If the thread is redirected, change request options and restart it
+      thread.on 'redirect', (res) =>
+        location = url.parse res.headers['location']
+        _.extend @reqOpts, location
+        _.extend thread.reqOpts, location
+        @_restartThread thread
       # Bind thread events
       @_bindThread thread
 
@@ -247,8 +224,3 @@ module.exports = class Request extends Duplex
 
       # Increment offset
       @offset += length
-
-  _onEnd: ->
-    @connected = false
-    console.log "END #{@offset}/#{@range[1]}"
-    @stream.end()
